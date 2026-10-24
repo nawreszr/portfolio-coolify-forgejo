@@ -15,6 +15,7 @@ Déploiement d'un portfolio Next.js avec **Coolify** (PaaS auto-hébergé) depui
 6. [Partie C : Déploiement du portfolio](#6-partie-c--déploiement-du-portfolio)
 7. [Partie D : Redéploiement automatique (webhook)](#7-partie-d--redéploiement-automatique-webhook)
 8. [Rollback et supervision](#8-rollback-et-supervision)
+9. [Résumé](#9-résumé)
 
 ---
 
@@ -46,20 +47,19 @@ Navigateur ──http://portfolio.coolify.local──► Traefik (:80) ──►
 
 | Élément | Détail |
 |---|---|
-| VM | Ubuntu 24.04, 2 vCPU, 4 Go de RAM recommandés, 20 Go de disque, accès `sudo` |
-| Réseau | IP de la VM joignable depuis le poste, accès Internet sortant |
+| VM | Ubuntu 24.04, 2 vCPU, 4 Go de RAM recommandés, 30 Go de disque, accès `sudo` |
+| Réseau | IP de la VM (`192.168.201.128`) joignable depuis le poste, accès Internet sortant |
 | VM dédiée | Coolify gère Docker et le proxy sur le port 80 : rien d'autre n'y est installé |
 | Poste | Git installé, code du portfolio Next.js du TP1 |
 | Domaine / GitHub | Aucun : nom d'hôte local via le fichier `hosts`, dépôt sur Forgejo |
-
 
 ---
 
 ## 4. Partie A : Installation de Coolify
 
 ```bash
-ip -4 a                                  # noter l'IP de la VM
-ssh nawres@192.168.201.128          # depuis le poste
+ip -4 a                                      # noter l'IP de la VM
+ssh workerdevops@192.168.201.128             # depuis le poste
 curl -fsSL https://cdn.coollabs.io/coolify/install.sh | sudo bash
 docker --version
 docker ps
@@ -125,7 +125,7 @@ Ouvrir `http://192.168.201.128:3001` et remplir l'assistant d'installation :
 
 ### Créer le dépôt et y pousser le portfolio
 
-Dans Forgejo : *Nouveau dépôt* → nom `portfolio`, visibilité **publique** (clone sans authentification par Coolify). Depuis le dossier du portfolio, sur le poste :
+Dans Forgejo : *Nouveau dépôt* → nom `portfolio`, visibilité **publique** (clone sans authentification par Coolify). Depuis le dossier du portfolio :
 
 ```bash
 git remote add forgejo http://192.168.201.128:3001/nawres/portfolio.git
@@ -167,6 +167,9 @@ Test : `ping portfolio.coolify.local` doit répondre depuis l'IP de la VM.
 | 6 | Domains | `http://portfolio.coolify.local` (préfixe `http://` obligatoire, sinon Coolify tente d'obtenir un certificat) |
 | 7 | Deploy | Suivre les logs en direct |
 
+> **Version de Node.js :** Coolify utilise Node.js 18 par défaut avec Nixpacks, ce qui fait échouer le build de Next.js. Ajouter la variable d'environnement `NIXPACKS_NODE_VERSION=22` dans les paramètres de l'application.
+
+![Configuration de l'application dans Coolify](captures/coolify-config.png)
 
 ![Déploiement terminé avec succès](captures/coolify-deploy.png)
 
@@ -216,8 +219,9 @@ Sans aucune action dans Coolify, un nouveau déploiement apparaît dans l'onglet
 
 ## 8. Rollback et supervision
 
-**Rollback.** Pousser volontairement une erreur de build, observer l'échec du déploiement automatique, puis revenir à la version précédente depuis l'onglet des déploiements. Corriger ensuite le dépôt.
+**Rollback.** Un build en erreur a été poussé volontairement (un commentaire HTML `<!-- -->` invalide dans un fichier `.tsx`). Le déploiement automatique a échoué, l'ancienne version est restée en ligne, puis un retour à la version précédente a été effectué depuis l'onglet des déploiements. Le dépôt a ensuite été corrigé.
 
+![Rollback vers la version précédente](captures/coolify-rollback.png)
 
 **Supervision.** Consulter les logs de l'application, `docker stats` et l'utilisation des ressources dans le dashboard.
 
@@ -228,12 +232,12 @@ docker logs <conteneur-application> --tail 50
 
 ---
 
-## Résumé
+## 9. Résumé
 
 - [x] Coolify installé et dashboard accessible
 - [x] Forgejo installé, dépôt `portfolio` créé
 - [x] Portfolio déployé sur `http://portfolio.coolify.local`
 - [x] Webhook Forgejo → Coolify : un `git push` redéploie automatiquement
-- [ ] Rollback testé
+- [x] Rollback testé
 
-Les difficultés rencontrées et la comparaison PaaS / IaC (TP1) sont détaillées dans [`RAPPORT.md`](RAPPORT.md).
+Les difficultés rencontrées et la comparaison des approches sont détaillées dans [`RAPPORT.md`](RAPPORT.md).
